@@ -5,8 +5,8 @@ import { ZoneClient2016 as Client } from "@h1z1-server/out/servers/ZoneServer201
 import axios from 'axios';
 import { DamageInfo } from "@h1z1-server/out/types/zoneserver";
 
-export default class ServerPlugin extends BasePlugin {
-  public name = "DiscordIntegration";
+export default class DiscordIntegrationPlugin extends BasePlugin {
+  public name = "Discord Integration";
   public description = "Discord integration tools.";
   public author = "Meme";
   public version = "0.1"
@@ -24,21 +24,18 @@ export default class ServerPlugin extends BasePlugin {
   }
 
   public async init(server: ZoneServer2016): Promise<void> {
-    console.log("DiscordIntegration initialized.")
-    
+
     this.registerCommandHooks(server);
 
     this.registerPlayerDeathHook(server);
-
   }
 
   registerPlayerDeathHook(server: ZoneServer2016) {
     const logPlayerDeath = server.logPlayerDeath;
     server.logPlayerDeath = (client: Client, damageInfo: DamageInfo) => {
-      const sourceClient = server.getClientByCharId(damageInfo.entity);
-      const entityName = sourceClient ? sourceClient.character.name : damageInfo.entity;
-
-      const weaponItemDef = server.getItemDefinition(damageInfo.weapon),
+      const sourceClient = server.getClientByCharId(damageInfo.entity),
+      entityName = sourceClient ? sourceClient.character.name : damageInfo.entity,
+      weaponItemDef = server.getItemDefinition(damageInfo.weapon),
       weaponName = weaponItemDef ? weaponItemDef.MODEL_NAME : "undefined";
 
       this.sendWebhookMessage(this.playerDeathWebhook, `${entityName} has killed ${client.character.name} using ${weaponName}`);
@@ -56,7 +53,6 @@ export default class ServerPlugin extends BasePlugin {
       }
       executeCommand.call(server._packetHandlers.commandHandler, server, client, packet);
     }
-
     
     const executeInternalCommand = server._packetHandlers.commandHandler.executeInternalCommand;
     server._packetHandlers.commandHandler.executeInternalCommand = (server: ZoneServer2016, client: Client, commandName: string, packet: any) => {
