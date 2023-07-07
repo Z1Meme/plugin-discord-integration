@@ -31,34 +31,28 @@ export default class DiscordIntegrationPlugin extends BasePlugin {
   }
 
   registerPlayerDeathHook(server: ZoneServer2016) {
-    const logPlayerDeath = server.logPlayerDeath;
-    server.logPlayerDeath = (client: Client, damageInfo: DamageInfo) => {
+    server.pluginManager.hookMethod(this, server, "logPlayerDeath", (client: Client, damageInfo: DamageInfo) => {
       const sourceClient = server.getClientByCharId(damageInfo.entity),
       entityName = sourceClient ? sourceClient.character.name : damageInfo.entity,
       weaponItemDef = server.getItemDefinition(damageInfo.weapon),
       weaponName = weaponItemDef ? weaponItemDef.MODEL_NAME : "undefined";
 
       this.sendWebhookMessage(this.playerDeathWebhook, `${entityName} has killed ${client.character.name} using ${weaponName}`);
-      logPlayerDeath.call(server, client, damageInfo);
-    }
+    }, {callBefore: false, callAfter: true})
   }
 
   registerCommandHooks(server: ZoneServer2016) {
-    const executeCommand = server._packetHandlers.commandHandler.executeCommand;
-    server._packetHandlers.commandHandler.executeCommand = (server: ZoneServer2016, client: Client, packet: any) => {
+    server.pluginManager.hookMethod(this, server._packetHandlers.commandHandler, "executeCommand", (server: ZoneServer2016, client: Client, packet: any) => {
       const hash = packet.data.commandHash,
       command = server._packetHandlers.commandHandler.commands[hash];
       if(command) {
         this.sendCommandWebhook(client, command.name, packet.data.arguments);
       }
-      executeCommand.call(server._packetHandlers.commandHandler, server, client, packet);
-    }
-    
-    const executeInternalCommand = server._packetHandlers.commandHandler.executeInternalCommand;
-    server._packetHandlers.commandHandler.executeInternalCommand = (server: ZoneServer2016, client: Client, commandName: string, packet: any) => {
+    }, {callBefore: false, callAfter: true});
+
+    server.pluginManager.hookMethod(this, server._packetHandlers.commandHandler, "executeInternalCommand", (server: ZoneServer2016, client: Client, commandName: string, packet: any) => {
       this.sendCommandWebhook(client, commandName, "");
-      executeInternalCommand.call(server._packetHandlers.commandHandler, server, client, commandName, packet);
-    }
+    }, {callBefore: false, callAfter: true});
   }
 
   async sendWebhookMessage(webhookUrl: string, content: string) {
@@ -74,5 +68,4 @@ export default class DiscordIntegrationPlugin extends BasePlugin {
     const message = `\`${client.character.name}: /${commandName} ${args}\``;
     this.sendWebhookMessage(this.adminCommandWebhook, message);
   }
-
 }
